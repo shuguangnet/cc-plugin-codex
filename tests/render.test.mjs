@@ -123,3 +123,122 @@ describe("renderStatusReport", () => {
     assert.ok(output.includes("job-1"));
   });
 });
+
+describe("renderJobStatusReport", () => {
+  it("renders running job with elapsed time and cancel hint", () => {
+    const job = {
+      id: "job-100",
+      status: "running",
+      kindLabel: "task",
+      title: "My Task",
+      elapsed: "30s",
+      summary: "Working on it"
+    };
+    const output = renderJobStatusReport(job);
+    assert.ok(output.includes("# Claude Code Job Status"));
+    assert.ok(output.includes("job-100"));
+    assert.ok(output.includes("running"));
+    assert.ok(output.includes("My Task"));
+    assert.ok(output.includes("Elapsed: 30s"));
+    assert.ok(output.includes("/cc:cancel job-100"));
+    // Should not show result hint for running jobs
+    assert.ok(!output.includes("/cc:result job-100"));
+  });
+
+  it("renders completed job with duration and result hint", () => {
+    const job = {
+      id: "job-200",
+      status: "completed",
+      kindLabel: "task",
+      title: "Done Task",
+      duration: "2m 15s",
+      sessionId: "sess-abc"
+    };
+    const output = renderJobStatusReport(job);
+    assert.ok(output.includes("job-200"));
+    assert.ok(output.includes("completed"));
+    assert.ok(output.includes("Done Task"));
+    assert.ok(output.includes("Duration: 2m 15s"));
+    assert.ok(output.includes("Session: sess-abc"));
+    assert.ok(output.includes("/cc:result job-200"));
+    // Should not show cancel hint for completed jobs
+    assert.ok(!output.includes("/cc:cancel job-200"));
+  });
+
+  it("renders queued job with cancel hint", () => {
+    const job = { id: "job-300", status: "queued", kindLabel: "review" };
+    const output = renderJobStatusReport(job);
+    assert.ok(output.includes("queued"));
+    assert.ok(output.includes("review"));
+    assert.ok(output.includes("/cc:cancel job-300"));
+  });
+
+  it("renders failed job with result hint", () => {
+    const job = { id: "job-400", status: "failed", summary: "Error occurred" };
+    const output = renderJobStatusReport(job);
+    assert.ok(output.includes("failed"));
+    assert.ok(output.includes("Summary: Error occurred"));
+    assert.ok(output.includes("/cc:result job-400"));
+  });
+});
+
+describe("renderStoredJobResult", () => {
+  it("renders raw output from stored job stdout", () => {
+    const job = { id: "job-10" };
+    const storedJob = {
+      sessionId: "sess-1",
+      result: { claudeCode: { stdout: "Hello from Claude\n" } }
+    };
+    const output = renderStoredJobResult(job, storedJob);
+    assert.ok(output.includes("Hello from Claude"));
+    assert.ok(output.includes("Claude Code session: sess-1"));
+  });
+
+  it("renders raw output without session when no sessionId", () => {
+    const job = { id: "job-11" };
+    const storedJob = {
+      result: { claudeCode: { stdout: "Result text\n" } }
+    };
+    const output = renderStoredJobResult(job, storedJob);
+    assert.ok(output.includes("Result text"));
+    assert.ok(!output.includes("Claude Code session"));
+  });
+
+  it("falls back to storedJob.rendered when no stdout", () => {
+    const job = { id: "job-12" };
+    const storedJob = { rendered: "Rendered content\n" };
+    const output = renderStoredJobResult(job, storedJob);
+    assert.ok(output.includes("Rendered content"));
+  });
+
+  it("renders structured fallback when no raw output", () => {
+    const job = { id: "job-20", title: "My Review", status: "completed", summary: "All good" };
+    const storedJob = { sessionId: "sess-2" };
+    const output = renderStoredJobResult(job, storedJob);
+    assert.ok(output.includes("# My Review"));
+    assert.ok(output.includes("Job: job-20"));
+    assert.ok(output.includes("Status: completed"));
+    assert.ok(output.includes("Session: sess-2"));
+    assert.ok(output.includes("Summary: All good"));
+  });
+
+  it("shows error message when present", () => {
+    const job = { id: "job-21", title: "Failed Task", status: "failed", errorMessage: "Process crashed" };
+    const storedJob = {};
+    const output = renderStoredJobResult(job, storedJob);
+    assert.ok(output.includes("Process crashed"));
+  });
+
+  it("shows no result message when no payload and no error", () => {
+    const job = { id: "job-22", status: "completed" };
+    const storedJob = null;
+    const output = renderStoredJobResult(job, storedJob);
+    assert.ok(output.includes("No result payload stored"));
+  });
+
+  it("handles null job and storedJob gracefully", () => {
+    const output = renderStoredJobResult(null, null);
+    assert.ok(output.includes("# Claude Code Result"));
+    assert.ok(output.includes("No result payload stored"));
+  });
+});

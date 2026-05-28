@@ -137,7 +137,7 @@ function enrichJob(job) {
  * @param {number} ms - Milliseconds to format
  * @returns {string} Formatted string (e.g. "500ms", "5s", "2m 30s", "1h 5m")
  */
-function formatElapsed(ms) {
+export function formatElapsed(ms) {
   if (ms < 1000) return `${ms}ms`;
   const seconds = Math.floor(ms / 1000);
   if (seconds < 60) return `${seconds}s`;

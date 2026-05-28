@@ -236,13 +236,24 @@ export function readJobFile(jobFile) {
   return JSON.parse(fs.readFileSync(jobFile, "utf8"));
 }
 
+function validateJobId(jobId) {
+  if (!jobId || typeof jobId !== "string") {
+    throw new Error("Job ID is required.");
+  }
+  if (jobId.includes("\0") || jobId.includes("..") || jobId.includes("/") || jobId.includes("\\")) {
+    throw new Error(`Invalid job ID: ${jobId}`);
+  }
+}
+
 /**
  * Resolve the path to a job's log file.
  * @param {string} cwd - Working directory
- * @param {string} jobId - Job identifier
+ * @param {string} jobId - Job identifier (must not contain path separators or traversal sequences)
  * @returns {string} Absolute path to the job log file
+ * @throws {Error} If jobId is invalid or contains path traversal characters
  */
 export function resolveJobLogFile(cwd, jobId) {
+  validateJobId(jobId);
   ensureStateDir(cwd);
   return path.join(resolveJobsDir(cwd), `${jobId}.log`);
 }
@@ -250,10 +261,12 @@ export function resolveJobLogFile(cwd, jobId) {
 /**
  * Resolve the path to a job's JSON file.
  * @param {string} cwd - Working directory
- * @param {string} jobId - Job identifier
+ * @param {string} jobId - Job identifier (must not contain path separators or traversal sequences)
  * @returns {string} Absolute path to the job JSON file
+ * @throws {Error} If jobId is invalid or contains path traversal characters
  */
 export function resolveJobFile(cwd, jobId) {
+  validateJobId(jobId);
   ensureStateDir(cwd);
   return path.join(resolveJobsDir(cwd), `${jobId}.json`);
 }

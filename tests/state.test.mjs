@@ -5,6 +5,8 @@ import path from "node:path";
 import os from "node:os";
 import {
   resolveStateDir,
+  resolveJobFile,
+  resolveJobLogFile,
   loadState,
   saveState,
   upsertJob,
@@ -88,5 +90,68 @@ describe("state management", () => {
     const config = getConfig(testDir);
     assert.equal(config.key1, "value1");
     assert.equal(config.key2, "value2");
+  });
+});
+
+describe("job ID path traversal protection", () => {
+  it("resolveJobFile rejects path traversal with ../", () => {
+    assert.throws(
+      () => resolveJobFile(testDir, "../../etc/passwd"),
+      /Invalid job ID/
+    );
+  });
+
+  it("resolveJobLogFile rejects path traversal with ../", () => {
+    assert.throws(
+      () => resolveJobLogFile(testDir, "../../etc/passwd"),
+      /Invalid job ID/
+    );
+  });
+
+  it("resolveJobFile rejects path separator /", () => {
+    assert.throws(
+      () => resolveJobFile(testDir, "subdir/file"),
+      /Invalid job ID/
+    );
+  });
+
+  it("resolveJobFile rejects backslash separator", () => {
+    assert.throws(
+      () => resolveJobFile(testDir, "subdir\\file"),
+      /Invalid job ID/
+    );
+  });
+
+  it("resolveJobFile rejects null byte injection", () => {
+    assert.throws(
+      () => resolveJobFile(testDir, "valid\0name"),
+      /Invalid job ID/
+    );
+  });
+
+  it("resolveJobFile rejects empty string", () => {
+    assert.throws(
+      () => resolveJobFile(testDir, ""),
+      /Job ID is required/
+    );
+  });
+
+  it("resolveJobFile rejects null", () => {
+    assert.throws(
+      () => resolveJobFile(testDir, null),
+      /Job ID is required/
+    );
+  });
+
+  it("resolveJobFile accepts valid job ID", () => {
+    const filePath = resolveJobFile(testDir, "job-123-abc");
+    assert.ok(filePath.endsWith("job-123-abc.json"));
+    assert.ok(!filePath.includes(".."));
+  });
+
+  it("resolveJobLogFile accepts valid job ID", () => {
+    const filePath = resolveJobLogFile(testDir, "job-123-abc");
+    assert.ok(filePath.endsWith("job-123-abc.log"));
+    assert.ok(!filePath.includes(".."));
   });
 });

@@ -131,12 +131,15 @@ function enrichJob(job) {
 
 /**
  * Format milliseconds into a human-readable elapsed time string.
+ * Handles edge cases: NaN, negative, Infinity, and non-number inputs
+ * are treated as 0ms.
  *
  * @param {number} ms - Milliseconds to format
  * @returns {string} Formatted string (e.g. "500ms", "5s", "2m 30s", "1h 5m")
  */
 export function formatElapsed(ms) {
-  if (ms < 1000) return `${ms}ms`;
+  if (!Number.isFinite(ms) || ms < 0) return "0ms";
+  if (ms < 1000) return `${Math.round(ms)}ms`;
   const seconds = Math.floor(ms / 1000);
   if (seconds < 60) return `${seconds}s`;
   const minutes = Math.floor(seconds / 60);

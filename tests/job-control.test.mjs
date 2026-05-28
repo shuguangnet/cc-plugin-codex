@@ -111,4 +111,29 @@ describe("formatElapsed", () => {
   it("formats large values", () => {
     assert.equal(formatElapsed(86400000), "24h 0m");
   });
+
+  it("returns 0ms for NaN", () => {
+    assert.equal(formatElapsed(NaN), "0ms");
+  });
+
+  it("returns 0ms for negative values", () => {
+    assert.equal(formatElapsed(-500), "0ms");
+    assert.equal(formatElapsed(-1), "0ms");
+  });
+
+  it("returns 0ms for Infinity", () => {
+    assert.equal(formatElapsed(Infinity), "0ms");
+    assert.equal(formatElapsed(-Infinity), "0ms");
+  });
+
+  it("returns 0ms for non-number inputs", () => {
+    assert.equal(formatElapsed(undefined), "0ms");
+    assert.equal(formatElapsed(null), "0ms");
+    assert.equal(formatElapsed("abc"), "0ms");
+  });
+
+  it("rounds fractional milliseconds below 1s", () => {
+    assert.equal(formatElapsed(999.6), "1000ms");
+    assert.equal(formatElapsed(500.4), "500ms");
+  });
 });

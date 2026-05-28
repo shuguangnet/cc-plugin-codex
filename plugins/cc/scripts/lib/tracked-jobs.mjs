@@ -75,8 +75,13 @@ export function createJobProgressUpdater(workspaceRoot, jobId) {
 
     const jobFile = resolveJobFile(workspaceRoot, jobId);
     if (!fs.existsSync(jobFile)) return;
-    const stored = readJobFile(jobFile);
-    writeJobFile(workspaceRoot, jobId, { ...stored, ...patch });
+    try {
+      const stored = readJobFile(jobFile);
+      writeJobFile(workspaceRoot, jobId, { ...stored, ...patch });
+    } catch {
+      // File may have been deleted or corrupted between existsSync check and read.
+      // This is a benign race condition — the next progress event will retry.
+    }
   };
 }
 

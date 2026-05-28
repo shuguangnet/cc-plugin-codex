@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Review Output",
+  "description": "Structured output from a code review",
+  "type": "object",
+  "required": ["verdict", "summary", "findings", "next_steps"],
+  "properties": {
+    "verdict": {
+      "type": "string",
+      "enum": ["approve", "request-changes", "needs-discussion"],
+      "description": "The overall verdict of the review"
+    },
+    "summary": {
+      "type": "string",
+      "description": "A one-paragraph summary of the review findings"
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["severity", "title", "body"],
+        "properties": {
+          "severity": {
+            "type": "string",
+            "enum": ["critical", "high", "medium", "low"]
+          },
+          "title": { "type": "string" },
+          "body": { "type": "string" },
+          "file": { "type": "string" },
+          "line_start": { "type": "integer", "minimum": 1 },
+          "line_end": { "type": "integer", "minimum": 1 },
+          "recommendation": { "type": "string" }
+        }
+      }
+    },
+    "next_steps": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

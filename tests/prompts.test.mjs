@@ -12,6 +12,41 @@ describe("loadPromptTemplate", () => {
     assert.ok(template.includes("REVIEW_KIND"));
     assert.ok(template.includes("TARGET_LABEL"));
   });
+
+  it("throws for missing template", () => {
+    assert.throws(
+      () => loadPromptTemplate(ROOT_DIR, "nonexistent-template"),
+      /Template not found/
+    );
+  });
+
+  it("throws for path traversal with ../", () => {
+    assert.throws(
+      () => loadPromptTemplate(ROOT_DIR, "../package"),
+      /Invalid template name/
+    );
+  });
+
+  it("throws for path traversal with slash", () => {
+    assert.throws(
+      () => loadPromptTemplate(ROOT_DIR, "commands/task"),
+      /Invalid template name/
+    );
+  });
+
+  it("throws for empty name", () => {
+    assert.throws(
+      () => loadPromptTemplate(ROOT_DIR, ""),
+      /Template name is required/
+    );
+  });
+
+  it("throws for null name", () => {
+    assert.throws(
+      () => loadPromptTemplate(ROOT_DIR, null),
+      /Template name is required/
+    );
+  });
 });
 
 describe("interpolateTemplate", () => {

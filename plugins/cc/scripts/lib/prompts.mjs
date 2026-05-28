@@ -21,10 +21,14 @@ export function loadPromptTemplate(rootDir, name) {
     throw new Error(`Invalid template name: ${name}`);
   }
   const promptPath = path.join(rootDir, "prompts", `${name}.md`);
-  if (!fs.existsSync(promptPath)) {
-    throw new Error(`Template not found: ${name}`);
+  try {
+    return fs.readFileSync(promptPath, "utf8");
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      throw new Error(`Template not found: ${name}`);
+    }
+    throw error;
   }
-  return fs.readFileSync(promptPath, "utf8");
 }
 
 /**

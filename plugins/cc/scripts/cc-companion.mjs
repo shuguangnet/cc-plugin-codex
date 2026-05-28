@@ -63,7 +63,8 @@ import {
   renderStatusReport,
   renderJobStatusReport,
   renderStoredJobResult,
-  renderCancelReport
+  renderCancelReport,
+  renderDoctorReport
 } from "./lib/render.mjs";
 
 const ROOT_DIR = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
@@ -584,45 +585,7 @@ async function handleDoctor(argv) {
     diagnostics.recommendations.push("All checks passed. Plugin is ready to use.");
   }
 
-  const lines = [
-    "# CC Plugin Doctor",
-    "",
-    `Ready: ${diagnostics.ready ? "✅ Yes" : "❌ No"}`,
-    "",
-    "## System",
-    `- Node.js: ${nodeStatus.detail}`,
-    `- npm: ${npmStatus.detail}`,
-    `- Git: ${gitStatus.detail}`,
-    `- Platform: ${process.platform} ${process.arch}`,
-    "",
-    "## Claude Code",
-    `- Available: ${claudeStatus.available ? "Yes" : "No"}`,
-    `- Detail: ${claudeStatus.detail}`,
-    `- Auth: ${authStatus.detail}`,
-    "",
-    "## Workspace",
-    `- Root: ${workspaceRoot}`,
-    `- Git repo: ${gitRepo ? "Yes" : "No"}`,
-    `- Branch: ${gitBranch}`,
-    "",
-    "## Plugin",
-    `- Version: ${diagnostics.plugin.version}`,
-    `- Review gate: ${diagnostics.plugin.reviewGate ? "enabled" : "disabled"}`,
-    `- Total jobs: ${diagnostics.plugin.totalJobs}`,
-    `- Running: ${diagnostics.plugin.runningJobs}`
-  ];
-
-  if (diagnostics.warnings.length > 0) {
-    lines.push("", "## ⚠️ Warnings");
-    for (const w of diagnostics.warnings) lines.push(`- ${w}`);
-  }
-
-  if (diagnostics.recommendations.length > 0) {
-    lines.push("", "## 💡 Recommendations");
-    for (const r of diagnostics.recommendations) lines.push(`- ${r}`);
-  }
-
-  outputResult(options.json ? diagnostics : `${lines.join("\n").trimEnd()}\n`, options.json);
+  outputResult(options.json ? diagnostics : renderDoctorReport(diagnostics), options.json);
 }
 
 // ──────────────────────────────────────────────────

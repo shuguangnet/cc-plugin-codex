@@ -5,7 +5,8 @@
   "type": "module",
   "main": "scripts/cc-companion.mjs",
   "scripts": {
-    "test": "node --test tests/"
+    "test": "node --test tests/*.test.mjs",
+    "check": "node --check plugins/cc/scripts/cc-companion.mjs"
   },
   "keywords": ["codex", "claude-code", "plugin", "ai", "code-review"],
   "license": "MIT",

@@ -26,7 +26,7 @@ import {
   runClaudeConversation
 } from "./lib/claude-code.mjs";
 import { readStdinIfPiped } from "./lib/fs.mjs";
-import { ensureGitRepository, collectReviewContext, resolveReviewTarget } from "./lib/git.mjs";
+import { ensureGitRepository, collectReviewContext, resolveReviewTarget, getCurrentBranch } from "./lib/git.mjs";
 import { binaryAvailable } from "./lib/process.mjs";
 import { loadPromptTemplate, interpolateTemplate } from "./lib/prompts.mjs";
 import {
@@ -73,13 +73,14 @@ function printUsage() {
   console.log(
     [
       "Usage:",
-      "  node scripts/cc-companion.mjs setup [--json]",
-      "  node scripts/cc-companion.mjs task [--background] [--write] [--resume-last|--resume <id>] [--model <model>] [prompt]",
+      "  node scripts/cc-companion.mjs setup [--json] [--enable-review-gate|--disable-review-gate]",
+      "  node scripts/cc-companion.mjs task [--background] [--write] [--resume-last|--resume <id>] [--model <model>] [--allowed-tools <tools>] [prompt]",
       "  node scripts/cc-companion.mjs review [--wait|--background] [--base <ref>] [--scope auto|working-tree|branch]",
       "  node scripts/cc-companion.mjs adversarial-review [--wait|--background] [--base <ref>] [--scope auto|working-tree|branch>] [focus text]",
       "  node scripts/cc-companion.mjs status [job-id] [--all] [--json]",
       "  node scripts/cc-companion.mjs result [job-id] [--json]",
-      "  node scripts/cc-companion.mjs cancel [job-id] [--json]"
+      "  node scripts/cc-companion.mjs cancel [job-id] [--json]",
+      "  node scripts/cc-companion.mjs doctor [--json]"
     ].join("\n")
   );
 }
@@ -223,6 +224,7 @@ async function executeTaskRun(request) {
     model: request.model,
     maxTurns: request.write ? 50 : 10,
     permissionMode: request.write ? "full-auto" : "plan",
+    allowedTools: request.allowedTools,
     onProgress: request.onProgress
   });
 
@@ -251,7 +253,7 @@ async function executeTaskRun(request) {
 
 async function handleTask(argv) {
   const { options, positional } = parseCommandInput(argv, {
-    valueOptions: ["cwd", "model", "resume"],
+    valueOptions: ["cwd", "model", "resume", "allowed-tools"],
     booleanOptions: ["background", "write", "resume-last"]
   });
 
@@ -303,6 +305,7 @@ async function handleTask(argv) {
     resumeSessionId,
     model: options.model,
     write: options.write,
+    allowedTools: options["allowed-tools"],
     onProgress: progressReporter
   });
 
@@ -504,6 +507,125 @@ async function handleCancel(argv) {
 }
 
 // ──────────────────────────────────────────────────
+// doctor
+// ──────────────────────────────────────────────────
+
+async function handleDoctor(argv) {
+  const { options } = parseCommandInput(argv, {
+    valueOptions: ["cwd"],
+    booleanOptions: ["json"]
+  });
+
+  const cwd = resolveCommandCwd(options);
+  const workspaceRoot = resolveCommandWorkspace(options);
+
+  const nodeStatus = binaryAvailable("node", ["--version"], { cwd });
+  const npmStatus = binaryAvailable("npm", ["--version"], { cwd });
+  const gitStatus = binaryAvailable("git", ["--version"], { cwd });
+  const claudeStatus = getClaudeCodeAvailability();
+  const authStatus = await getClaudeCodeAuthStatus(cwd);
+
+  let gitRepo = false;
+  let gitBranch = "N/A";
+  try {
+    ensureGitRepository(cwd);
+    gitRepo = true;
+    gitBranch = getCurrentBranch(cwd);
+  } catch {
+    // Not a git repo
+  }
+
+  const config = getConfig(workspaceRoot);
+  const jobs = listJobs(workspaceRoot);
+
+  const diagnostics = {
+    system: {
+      node: nodeStatus,
+      npm: npmStatus,
+      git: gitStatus,
+      platform: process.platform,
+      arch: process.arch,
+      cwd
+    },
+    claudeCode: {
+      available: claudeStatus.available,
+      detail: claudeStatus.detail,
+      auth: authStatus
+    },
+    workspace: {
+      root: workspaceRoot,
+      isGitRepo: gitRepo,
+      branch: gitBranch
+    },
+    plugin: {
+      version: "0.2.0",
+      reviewGate: config.stopReviewGate ?? false,
+      totalJobs: jobs.length,
+      runningJobs: jobs.filter((j) => j.status === "running" || j.status === "queued").length
+    },
+    ready: nodeStatus.available && claudeStatus.available && authStatus.loggedIn,
+    warnings: [],
+    recommendations: []
+  };
+
+  if (!nodeStatus.available) diagnostics.warnings.push("Node.js not found.");
+  if (!npmStatus.available) diagnostics.warnings.push("npm not found.");
+  if (!claudeStatus.available) {
+    diagnostics.warnings.push("Claude Code CLI not installed.");
+    diagnostics.recommendations.push("Install: npm install -g @anthropic-ai/claude-code");
+  }
+  if (claudeStatus.available && !authStatus.loggedIn) {
+    diagnostics.warnings.push("Claude Code not authenticated.");
+    diagnostics.recommendations.push("Run `claude` interactively to authenticate.");
+  }
+  if (!gitRepo) diagnostics.warnings.push("Not in a git repository.");
+
+  if (diagnostics.ready) {
+    diagnostics.recommendations.push("All checks passed. Plugin is ready to use.");
+  }
+
+  const lines = [
+    "# CC Plugin Doctor",
+    "",
+    `Ready: ${diagnostics.ready ? "✅ Yes" : "❌ No"}`,
+    "",
+    "## System",
+    `- Node.js: ${nodeStatus.detail}`,
+    `- npm: ${npmStatus.detail}`,
+    `- Git: ${gitStatus.detail}`,
+    `- Platform: ${process.platform} ${process.arch}`,
+    "",
+    "## Claude Code",
+    `- Available: ${claudeStatus.available ? "Yes" : "No"}`,
+    `- Detail: ${claudeStatus.detail}`,
+    `- Auth: ${authStatus.detail}`,
+    "",
+    "## Workspace",
+    `- Root: ${workspaceRoot}`,
+    `- Git repo: ${gitRepo ? "Yes" : "No"}`,
+    `- Branch: ${gitBranch}`,
+    "",
+    "## Plugin",
+    `- Version: ${diagnostics.plugin.version}`,
+    `- Review gate: ${diagnostics.plugin.reviewGate ? "enabled" : "disabled"}`,
+    `- Total jobs: ${diagnostics.plugin.totalJobs}`,
+    `- Running: ${diagnostics.plugin.runningJobs}`
+  ];
+
+  if (diagnostics.warnings.length > 0) {
+    lines.push("", "## ⚠️ Warnings");
+    for (const w of diagnostics.warnings) lines.push(`- ${w}`);
+  }
+
+  if (diagnostics.recommendations.length > 0) {
+    lines.push("", "## 💡 Recommendations");
+    for (const r of diagnostics.recommendations) lines.push(`- ${r}`);
+  }
+
+  outputResult(options.json ? diagnostics : `${lines.join("\n").trimEnd()}\n`, options.json);
+}
+
+// ──────────────────────────────────────────────────
 // Main dispatch
 // ──────────────────────────────────────────────────
 
@@ -531,6 +653,9 @@ try {
       break;
     case "cancel":
       await handleCancel(rest);
+      break;
+    case "doctor":
+      await handleDoctor(rest);
       break;
     default:
       printUsage();

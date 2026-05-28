@@ -1,6 +1,6 @@
 ---
 description: Delegate a coding task to Claude Code
-argument-hint: '[--background] [--write] [--resume-last|--resume <id>] [--model <model>] [prompt]'
+argument-hint: '[--background] [--write] [--resume-last|--resume <id>] [--model <model>] [--allowed-tools <tools>] [prompt]'
 allowed-tools: Read, Glob, Grep, Bash(node:*), Bash(git:*), AskUserQuestion
 ---
 
@@ -22,6 +22,8 @@ Argument handling:
 - `--write` grants Claude Code file modification permissions.
 - `--resume-last` continues the most recent Claude Code conversation.
 - `--resume <id>` continues a specific conversation by session ID.
+- `--allowed-tools <tools>` restricts which tools Claude Code can use (comma-separated).
+- `--model <model>` specifies the Claude model to use.
 
 Foreground flow:
 - Run:

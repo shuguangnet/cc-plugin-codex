@@ -1,0 +1,8 @@
+{
+  "stopReviewGate": false,
+  "defaultModel": null,
+  "defaultEffort": "medium",
+  "allowedTools": [],
+  "backgroundByDefault": false,
+  "logLevel": "info"
+}

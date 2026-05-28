@@ -3,6 +3,26 @@
  * Supports --flag, --key=value, --key value, and positional args.
  */
 
+/**
+ * Split a raw argument string into tokens, respecting shell-style quoting rules.
+ *
+ * Handles:
+ * - Double-quoted strings (`"hello world"`) — treated as a single token
+ * - Single-quoted strings (`'hello world'`) — treated as a single token
+ * - Backslash escapes (`\\ `) — the escaped character is included literally
+ * - Unquoted spaces — treated as token separators
+ *
+ * @param {string} raw - Raw argument string to split (e.g. from a text input field)
+ * @returns {string[]} Array of parsed argument tokens, empty array if input is empty or whitespace-only
+ *
+ * @example
+ * splitRawArgumentString('--model sonnet "review this"')
+ * // => ['--model', 'sonnet', 'review this']
+ *
+ * @example
+ * splitRawArgumentString("it's\\ a\\ test")
+ * // => ["it's a test"]
+ */
 export function splitRawArgumentString(raw) {
   if (!raw || !raw.trim()) return [];
   const tokens = [];
@@ -42,6 +62,37 @@ export function splitRawArgumentString(raw) {
   return tokens;
 }
 
+/**
+ * Parse an array of argument tokens into structured options and positional arguments.
+ *
+ * Supports:
+ * - Long boolean flags: `--verbose` (treated as `true`)
+ * - Long value options: `--key=value` or `--key value` (consumes next token as value)
+ * - Short flags/values: `-v` or `-C /tmp` (resolved via aliasMap)
+ * - Double-dash separator: `--` — everything after is positional
+ * - Automatic type dispatch via `booleanOptions` and `valueOptions` config sets
+ *
+ * When a `--` prefixed argument is not in `booleanOptions` or `valueOptions`, it falls
+ * back to consuming the next argument as a value (unless the next argument looks like a flag).
+ *
+ * @param {string[]} argv - Array of argument tokens (e.g. from `splitRawArgumentString` or `process.argv.slice(2)`)
+ * @param {object} [config={}] - Parsing configuration
+ * @param {string[]} [config.valueOptions] - Option names that always consume the next token as a value
+ * @param {string[]} [config.booleanOptions] - Option names that are always treated as boolean flags
+ * @param {Record<string, string>} [config.aliasMap] - Mapping of short/alternative names to canonical names (e.g. `{ C: "cwd" }`)
+ * @returns {{ options: Record<string, string|boolean>, positional: string[] }} Parsed result with options object and positional args array
+ *
+ * @example
+ * parseArgs(['--json', '--model', 'sonnet', 'file.js'], {
+ *   booleanOptions: ['json'],
+ *   valueOptions: ['model']
+ * })
+ * // => { options: { json: true, model: 'sonnet' }, positional: ['file.js'] }
+ *
+ * @example
+ * parseArgs(['-C', '/tmp', 'hello'], { valueOptions: ['cwd'], aliasMap: { C: 'cwd' } })
+ * // => { options: { cwd: '/tmp' }, positional: ['hello'] }
+ */
 export function parseArgs(argv, config = {}) {
   const valueOptions = new Set(config.valueOptions ?? []);
   const booleanOptions = new Set(config.booleanOptions ?? []);

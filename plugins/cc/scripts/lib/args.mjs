@@ -58,6 +58,7 @@ export function splitRawArgumentString(raw) {
     }
     current += char;
   }
+  if (escape) current += '\\';
   if (current) tokens.push(current);
   return tokens;
 }

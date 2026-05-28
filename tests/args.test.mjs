@@ -20,6 +20,22 @@ describe("splitRawArgumentString", () => {
   it("handles escaped characters", () => {
     assert.deepStrictEqual(splitRawArgumentString("hello\\ world"), ["hello world"]);
   });
+
+  it("preserves trailing backslash as literal", () => {
+    assert.deepStrictEqual(splitRawArgumentString("hello\\"), ["hello\\"]);
+  });
+
+  it("preserves trailing backslash after token", () => {
+    assert.deepStrictEqual(splitRawArgumentString("a b\\"), ["a", "b\\"]);
+  });
+
+  it("handles backslash inside double quotes as escape", () => {
+    assert.deepStrictEqual(splitRawArgumentString('"hello\\world"'), ["helloworld"]);
+  });
+
+  it("handles input with only a backslash", () => {
+    assert.deepStrictEqual(splitRawArgumentString("\\"), ["\\"]);
+  });
 });
 
 describe("parseArgs", () => {

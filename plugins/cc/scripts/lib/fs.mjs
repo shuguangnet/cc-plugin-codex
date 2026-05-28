@@ -31,6 +31,12 @@ export function writeJsonFile(filePath, data) {
   fs.writeFileSync(filePath, `${JSON.stringify(data, null, 2)}\n`, "utf8");
 }
 
+/**
+ * Read all data from stdin if it's piped (not a TTY).
+ * Returns null if stdin is a terminal or if the piped input is empty.
+ *
+ * @returns {Promise<string|null>} Trimmed stdin content, or null if no piped input
+ */
 export function readStdinIfPiped() {
   // Check if stdin is a pipe (not a TTY)
   if (process.stdin.isTTY) return null;
@@ -44,10 +50,21 @@ export function readStdinIfPiped() {
   });
 }
 
+/**
+ * Ensure a directory exists, creating it and any parent directories if needed.
+ *
+ * @param {string} dirPath - Absolute path to the directory
+ */
 export function ensureDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
 }
 
+/**
+ * Check whether a path exists (file or directory) without throwing.
+ *
+ * @param {string} filePath - Absolute path to check
+ * @returns {boolean} true if the path exists, false otherwise
+ */
 export function fileExists(filePath) {
   try {
     fs.accessSync(filePath);

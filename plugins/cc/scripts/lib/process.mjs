@@ -4,6 +4,20 @@
 import { spawnSync } from "node:child_process";
 import process from "node:process";
 
+/**
+ * Execute a command synchronously and return the result.
+ *
+ * @param {string} command - The command to run
+ * @param {string[]} [args=[]] - Command arguments
+ * @param {object} [options={}] - Execution options
+ * @param {string} [options.cwd] - Working directory
+ * @param {object} [options.env] - Environment variables
+ * @param {string} [options.input] - Stdin input
+ * @param {number} [options.maxBuffer] - Max buffer size (default: 10 MB)
+ * @param {string|string[]} [options.stdio] - Stdio mode (default: "pipe")
+ * @param {number} [options.timeout] - Timeout in milliseconds (default: 0 = no timeout)
+ * @returns {{ command: string, args: string[], status: number, signal: string|null, stdout: string, stderr: string, error: Error|null }}
+ */
 export function runCommand(command, args = [], options = {}) {
   const result = spawnSync(command, args, {
     cwd: options.cwd,
@@ -28,6 +42,15 @@ export function runCommand(command, args = [], options = {}) {
   };
 }
 
+/**
+ * Execute a command and throw if it fails.
+ *
+ * @param {string} command - The command to run
+ * @param {string[]} [args=[]] - Command arguments
+ * @param {object} [options={}] - Execution options (see {@link runCommand})
+ * @returns {object} The command result
+ * @throws {Error} If the command fails to start or returns a non-zero exit code
+ */
 export function runCommandChecked(command, args = [], options = {}) {
   const result = runCommand(command, args, options);
   if (result.error) throw result.error;
@@ -35,6 +58,14 @@ export function runCommandChecked(command, args = [], options = {}) {
   return result;
 }
 
+/**
+ * Check whether a binary is available on the system.
+ *
+ * @param {string} command - The binary name to check
+ * @param {string[]} [versionArgs=["--version"]] - Args to invoke the binary with
+ * @param {object} [options={}] - Execution options
+ * @returns {{ available: boolean, detail: string }}
+ */
 export function binaryAvailable(command, versionArgs = ["--version"], options = {}) {
   const result = runCommand(command, versionArgs, options);
   if (result.error && result.error.code === "ENOENT") {
@@ -50,6 +81,12 @@ export function binaryAvailable(command, versionArgs = ["--version"], options = 
   return { available: true, detail: result.stdout.trim() || result.stderr.trim() || "ok" };
 }
 
+/**
+ * Terminate a process and its children by sending SIGTERM.
+ * Tries process group kill first (-pid), then falls back to direct kill.
+ *
+ * @param {number} pid - Process ID to terminate
+ */
 export function terminateProcessTree(pid) {
   if (!Number.isFinite(pid)) return;
   try {
@@ -63,6 +100,12 @@ export function terminateProcessTree(pid) {
   }
 }
 
+/**
+ * Format a failed command result into a human-readable error string.
+ *
+ * @param {{ command: string, args: string[], status: number, signal: string|null, stdout: string, stderr: string }} result
+ * @returns {string} Formatted error description
+ */
 export function formatCommandFailure(result) {
   const parts = [`${result.command} ${result.args.join(" ")}`.trim()];
   if (result.signal) {

@@ -148,6 +148,12 @@ export function writeJobFile(cwd, jobId, payload) {
   return jobFile;
 }
 
+/**
+ * Read and parse a job JSON file.
+ * @param {string} jobFile - Absolute path to the job JSON file
+ * @returns {object} Parsed job data
+ * @throws {Error} If the file cannot be read or parsed
+ */
 export function readJobFile(jobFile) {
   return JSON.parse(fs.readFileSync(jobFile, "utf8"));
 }

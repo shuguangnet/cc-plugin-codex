@@ -117,3 +117,67 @@ describe("tracked-jobs", () => {
     update(undefined);
   });
 });
+
+import { createProgressReporter } from "../plugins/cc/scripts/lib/tracked-jobs.mjs";
+
+describe("createProgressReporter", () => {
+  it("returns null when no outputs configured", () => {
+    const reporter = createProgressReporter({});
+    assert.equal(reporter, null);
+  });
+
+  it("returns a function when stderr is true", () => {
+    const reporter = createProgressReporter({ stderr: true });
+    assert.equal(typeof reporter, "function");
+  });
+
+  it("returns a function when logFile is provided", () => {
+    const logFile = path.join(testDir, "progress.log");
+    fs.writeFileSync(logFile, "", "utf8");
+    const reporter = createProgressReporter({ logFile });
+    assert.equal(typeof reporter, "function");
+  });
+
+  it("returns a function when onEvent is provided", () => {
+    const events = [];
+    const reporter = createProgressReporter({ onEvent: (e) => events.push(e) });
+    assert.equal(typeof reporter, "function");
+  });
+
+  it("calls onEvent callback with normalized event", () => {
+    const events = [];
+    const reporter = createProgressReporter({ onEvent: (e) => events.push(e) });
+    reporter({ message: "hello", phase: "running" });
+    assert.equal(events.length, 1);
+    assert.equal(events[0].message, "hello");
+    assert.equal(events[0].phase, "running");
+  });
+
+  it("normalizes string input to event object", () => {
+    const events = [];
+    const reporter = createProgressReporter({ onEvent: (e) => events.push(e) });
+    reporter("plain message");
+    assert.equal(events.length, 1);
+    assert.equal(events[0].message, "plain message");
+    assert.equal(events[0].phase, null);
+  });
+
+  it("writes to log file", () => {
+    const logFile = path.join(testDir, "progress2.log");
+    fs.writeFileSync(logFile, "", "utf8");
+    const reporter = createProgressReporter({ logFile });
+    reporter({ message: "log this" });
+    const content = fs.readFileSync(logFile, "utf8");
+    assert.ok(content.includes("log this"));
+  });
+
+  it("handles null/undefined input gracefully", () => {
+    const events = [];
+    const reporter = createProgressReporter({ onEvent: (e) => events.push(e) });
+    reporter(null);
+    reporter(undefined);
+    assert.equal(events.length, 2);
+    assert.equal(events[0].message, "");
+    assert.equal(events[1].message, "");
+  });
+});

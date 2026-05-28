@@ -172,6 +172,48 @@ export function renderCancelReport(job) {
   return `${lines.join("\n").trimEnd()}\n`;
 }
 
+export function renderDoctorReport(diag) {
+  const lines = [
+    "# CC Plugin Doctor",
+    "",
+    `Ready: ${diag.ready ? "✅ Yes" : "❌ No"}`,
+    "",
+    "## System",
+    `- Node.js: ${diag.system.node.detail}`,
+    `- npm: ${diag.system.npm.detail}`,
+    `- Git: ${diag.system.git.detail}`,
+    `- Platform: ${diag.system.platform} ${diag.system.arch}`,
+    "",
+    "## Claude Code",
+    `- Available: ${diag.claudeCode.available ? "Yes" : "No"}`,
+    `- Detail: ${diag.claudeCode.detail}`,
+    `- Auth: ${diag.claudeCode.auth.detail}`,
+    "",
+    "## Workspace",
+    `- Root: ${diag.workspace.root}`,
+    `- Git repo: ${diag.workspace.isGitRepo ? "Yes" : "No"}`,
+    `- Branch: ${diag.workspace.branch}`,
+    "",
+    "## Plugin",
+    `- Version: ${diag.plugin.version}`,
+    `- Review gate: ${diag.plugin.reviewGate ? "enabled" : "disabled"}`,
+    `- Total jobs: ${diag.plugin.totalJobs}`,
+    `- Running: ${diag.plugin.runningJobs}`
+  ];
+
+  if (diag.warnings.length > 0) {
+    lines.push("", "## ⚠️ Warnings");
+    for (const w of diag.warnings) lines.push(`- ${w}`);
+  }
+
+  if (diag.recommendations.length > 0) {
+    lines.push("", "## 💡 Recommendations");
+    for (const r of diag.recommendations) lines.push(`- ${r}`);
+  }
+
+  return `${lines.join("\n").trimEnd()}\n`;
+}
+
 function pushJobDetails(lines, job, options = {}) {
   const parts = [job.id, job.status ?? "unknown"];
   if (job.kindLabel) parts.push(job.kindLabel);

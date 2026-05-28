@@ -97,6 +97,7 @@ function buildPrintArgs(prompt, options = {}) {
 
 /**
  * Build CLI arguments for conversation resume.
+ * Reuses the common output format/model args from print mode.
  */
 function buildResumeArgs(sessionId, prompt, options = {}) {
   const args = ["--resume", sessionId];
@@ -105,19 +106,10 @@ function buildResumeArgs(sessionId, prompt, options = {}) {
     args.push("-p", prompt);
   }
 
-  if (options.outputFormat) {
-    args.push("--output-format", options.outputFormat);
-  } else {
-    args.push("--output-format", "json");
-  }
-
-  if (options.maxTurns) {
-    args.push("--max-turns", String(options.maxTurns));
-  }
-
-  if (options.model) {
-    args.push("--model", options.model);
-  }
+  // Share common option args with buildPrintArgs
+  args.push("--output-format", options.outputFormat ?? "json");
+  if (options.maxTurns) args.push("--max-turns", String(options.maxTurns));
+  if (options.model) args.push("--model", options.model);
 
   return args;
 }
@@ -200,12 +192,16 @@ export function parseClaudeOutput(stdout, stderr = "") {
 }
 
 /**
- * Run a single-shot prompt via Claude Code CLI.
- * Returns a promise that resolves with the parsed output.
+ * Internal helper: spawn the Claude Code CLI and collect output.
+ * Handles stdout/stderr collection, progress reporting, and exit processing.
+ *
+ * @param {string[]} args - CLI arguments
+ * @param {string} cwd - Working directory
+ * @param {object} options - Options including env and onProgress
+ * @returns {Promise<object>} Parsed output with exitCode and stderr
  */
-export function runClaudePrompt(cwd, prompt, options = {}) {
+function spawnClaudeProcess(args, cwd, options = {}) {
   return new Promise((resolve, reject) => {
-    const args = buildPrintArgs(prompt, options);
     const env = { ...process.env, ...(options.env ?? {}) };
 
     const child = spawn(CLAUDE_CLI, args, {
@@ -225,10 +221,8 @@ export function runClaudePrompt(cwd, prompt, options = {}) {
     child.stdout.on("data", (chunk) => { stdout += chunk; });
     child.stderr.on("data", (chunk) => {
       stderr += chunk;
-      // Report progress from stderr
       if (options.onProgress) {
-        const lines = chunk.split("\n").filter(Boolean);
-        for (const line of lines) {
+        for (const line of chunk.split("\n").filter(Boolean)) {
           options.onProgress({ message: line, phase: "running" });
         }
       }
@@ -261,49 +255,23 @@ export function runClaudePrompt(cwd, prompt, options = {}) {
 }
 
 /**
+ * Run a single-shot prompt via Claude Code CLI.
+ * Returns a promise that resolves with the parsed output.
+ */
+export function runClaudePrompt(cwd, prompt, options = {}) {
+  const args = buildPrintArgs(prompt, options);
+  return spawnClaudeProcess(args, cwd, options);
+}
+
+/**
  * Run a multi-turn conversation with Claude Code.
  * If resumeSessionId is provided, resumes that session.
  * Otherwise starts a new conversation.
  */
 export function runClaudeConversation(cwd, prompt, options = {}) {
   if (options.resumeSessionId) {
-    return new Promise((resolve, reject) => {
-      const args = buildResumeArgs(options.resumeSessionId, prompt, options);
-      const env = { ...process.env, ...(options.env ?? {}) };
-
-      const child = spawn(CLAUDE_CLI, args, {
-        cwd,
-        env,
-        stdio: ["pipe", "pipe", "pipe"],
-        shell: false,
-        windowsHide: true
-      });
-
-      let stdout = "";
-      let stderr = "";
-
-      child.stdout.setEncoding("utf8");
-      child.stderr.setEncoding("utf8");
-
-      child.stdout.on("data", (chunk) => { stdout += chunk; });
-      child.stderr.on("data", (chunk) => {
-        stderr += chunk;
-        if (options.onProgress) {
-          for (const line of chunk.split("\n").filter(Boolean)) {
-            options.onProgress({ message: line, phase: "running" });
-          }
-        }
-      });
-
-      child.on("error", (error) => {
-        reject(new Error(`Failed to resume Claude Code: ${error.message}`));
-      });
-
-      child.on("exit", (code) => {
-        const parsed = parseClaudeOutput(stdout);
-        resolve({ ...parsed, exitCode: code, stderr: stderr.trim() });
-      });
-    });
+    const args = buildResumeArgs(options.resumeSessionId, prompt, options);
+    return spawnClaudeProcess(args, cwd, options);
   }
 
   return runClaudePrompt(cwd, prompt, options);

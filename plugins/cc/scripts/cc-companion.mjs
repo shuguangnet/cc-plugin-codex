@@ -167,11 +167,27 @@ async function buildSetupReport(cwd, actionsTaken = []) {
 async function handleSetup(argv) {
   const { options } = parseCommandInput(argv, {
     valueOptions: ["cwd"],
-    booleanOptions: ["json"]
+    booleanOptions: ["json", "enable-review-gate", "disable-review-gate"]
   });
 
+  if (options["enable-review-gate"] && options["disable-review-gate"]) {
+    throw new Error("Choose either --enable-review-gate or --disable-review-gate.");
+  }
+
   const cwd = resolveCommandCwd(options);
-  const report = await buildSetupReport(cwd);
+  const workspaceRoot = resolveCommandWorkspace(options);
+  const actionsTaken = [];
+
+  if (options["enable-review-gate"]) {
+    setConfig(workspaceRoot, "stopReviewGate", true);
+    actionsTaken.push(`Enabled the stop-time review gate for ${workspaceRoot}.`);
+  } else if (options["disable-review-gate"]) {
+    setConfig(workspaceRoot, "stopReviewGate", false);
+    actionsTaken.push(`Disabled the stop-time review gate for ${workspaceRoot}.`);
+  }
+
+  const report = await buildSetupReport(cwd, actionsTaken);
+  report.reviewGateEnabled = getConfig(workspaceRoot).stopReviewGate ?? false;
   outputResult(options.json ? report : renderSetupReport(report), options.json);
 }
 

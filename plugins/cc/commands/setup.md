@@ -1,6 +1,6 @@
 ---
-description: Check whether Claude Code CLI is ready and authenticated
-argument-hint: '[--json]'
+description: Check whether Claude Code CLI is ready and optionally toggle the stop-time review gate
+argument-hint: '[--enable-review-gate|--disable-review-gate] [--json]'
 allowed-tools: Bash(node:*), Bash(npm:*), AskUserQuestion
 ---
 

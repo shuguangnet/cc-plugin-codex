@@ -127,56 +127,76 @@ function buildResumeArgs(sessionId, prompt, options = {}) {
  * Claude Code can return:
  * - A single JSON object with {result, session_id, ...}
  * - JSONL with multiple events (streaming mode)
+ * - Plain text (when output-format is text)
  */
-export function parseClaudeOutput(stdout) {
+export function parseClaudeOutput(stdout, stderr = "") {
   const trimmed = stdout.trim();
   if (!trimmed) {
+    // Check stderr for error messages
+    const stderrTrimmed = stderr.trim();
+    if (stderrTrimmed) {
+      return { result: "", sessionId: null, isError: true, error: stderrTrimmed, raw: "" };
+    }
     return { result: "", sessionId: null, isError: false, raw: "" };
   }
 
   // Try parsing as single JSON object first
   try {
     const parsed = JSON.parse(trimmed);
-    return {
-      result: parsed.result ?? parsed.content ?? trimmed,
-      sessionId: parsed.session_id ?? parsed.sessionId ?? null,
-      isError: parsed.is_error ?? false,
-      cost: parsed.cost ?? null,
-      duration: parsed.duration ?? null,
-      numTurns: parsed.num_turns ?? null,
-      raw: parsed
-    };
-  } catch {
-    // Try JSONL — take the last complete line
-    const lines = trimmed.split("\n").filter(Boolean);
-    let lastEvent = null;
-    let sessionId = null;
-
-    for (const line of lines) {
-      try {
-        const event = JSON.parse(line);
-        lastEvent = event;
-        if (event.session_id) sessionId = event.session_id;
-        if (event.sessionId) sessionId = event.sessionId;
-      } catch {
-        // Not JSON, skip
-      }
-    }
-
-    if (lastEvent) {
+    // Claude Code JSON output has these fields
+    if (typeof parsed === "object" && parsed !== null) {
       return {
-        result: lastEvent.result ?? lastEvent.content ?? lastEvent.text ?? trimmed,
-        sessionId,
-        isError: lastEvent.is_error ?? false,
-        cost: lastEvent.cost ?? null,
-        duration: lastEvent.duration ?? null,
-        raw: lastEvent
+        result: parsed.result ?? parsed.content ?? parsed.text ?? trimmed,
+        sessionId: parsed.session_id ?? parsed.sessionId ?? null,
+        isError: parsed.is_error ?? parsed.isError ?? false,
+        cost: parsed.cost_usd ?? parsed.cost ?? null,
+        duration: parsed.duration_ms ?? parsed.duration ?? null,
+        numTurns: parsed.num_turns ?? parsed.numTurns ?? null,
+        totalTokens: parsed.total_tokens ?? null,
+        raw: parsed
       };
     }
-
-    // Plain text output
-    return { result: trimmed, sessionId: null, isError: false, raw: trimmed };
+  } catch {
+    // Not single JSON, try JSONL
   }
+
+  // Try JSONL — accumulate events
+  const lines = trimmed.split("\n").filter(Boolean);
+  const events = [];
+  let sessionId = null;
+  let lastContentEvent = null;
+
+  for (const line of lines) {
+    try {
+      const event = JSON.parse(line);
+      events.push(event);
+      if (event.session_id) sessionId = event.session_id;
+      if (event.sessionId) sessionId = event.sessionId;
+      // Track content-type events
+      if (event.type === "assistant" || event.type === "result" || event.type === "content") {
+        lastContentEvent = event;
+      }
+    } catch {
+      // Not JSON, might be mixed text output
+    }
+  }
+
+  if (events.length > 0) {
+    // Prefer the last "result" event, then content, then last event
+    const resultEvent = events.find((e) => e.type === "result") ?? lastContentEvent ?? events[events.length - 1];
+    return {
+      result: resultEvent.result ?? resultEvent.content ?? resultEvent.text ?? trimmed,
+      sessionId,
+      isError: resultEvent.is_error ?? false,
+      cost: resultEvent.cost_usd ?? null,
+      duration: resultEvent.duration_ms ?? null,
+      events,
+      raw: resultEvent
+    };
+  }
+
+  // Plain text output
+  return { result: trimmed, sessionId: null, isError: false, raw: trimmed };
 }
 
 /**
@@ -224,7 +244,7 @@ export function runClaudePrompt(cwd, prompt, options = {}) {
         return;
       }
 
-      const parsed = parseClaudeOutput(stdout);
+      const parsed = parseClaudeOutput(stdout, stderr);
 
       if (code !== 0 && !parsed.result) {
         reject(new Error(stderr.trim() || `Claude Code exited with code ${code}`));

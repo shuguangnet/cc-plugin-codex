@@ -13,6 +13,7 @@ export function renderSetupReport(report) {
     `- npm: ${report.npm.detail}`,
     `- claude code: ${report.claudeCode.detail}`,
     `- auth: ${report.auth.detail}`,
+    `- review gate: ${report.reviewGateEnabled ? "enabled" : "disabled"}`,
     ""
   ];
 

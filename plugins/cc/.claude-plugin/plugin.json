@@ -1,6 +1,6 @@
 {
   "name": "cc",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Use Claude Code from Codex to delegate tasks and review code.",
   "author": {
     "name": "shuguangnet"

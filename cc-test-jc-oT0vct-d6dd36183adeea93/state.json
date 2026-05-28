@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "config": {},
+  "jobs": [
+    {
+      "createdAt": "2026-01-02T00:00:00Z",
+      "updatedAt": "2026-05-28T17:43:24.942Z",
+      "id": "job-2",
+      "status": "running"
+    },
+    {
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-05-28T17:43:24.920Z",
+      "id": "job-1",
+      "status": "completed"
+    }
+  ]
+}

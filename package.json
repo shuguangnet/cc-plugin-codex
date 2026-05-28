@@ -1,6 +1,6 @@
 {
   "name": "cc-plugin-codex",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Claude Code plugin for Codex - drive Claude Code from within Codex CLI",
   "type": "module",
   "main": "scripts/cc-companion.mjs",

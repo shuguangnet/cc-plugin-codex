@@ -1,0 +1,6 @@
+cc-plugin-codex
+Copyright (c) 2026 shuguangnet
+
+This project is inspired by openai/codex-plugin-cc (https://github.com/openai/codex-plugin-cc).
+While openai/codex-plugin-cc lets Claude Code drive Codex, this plugin does the reverse:
+it lets Codex drive Claude Code.

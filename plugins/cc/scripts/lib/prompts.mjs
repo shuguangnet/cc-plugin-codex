@@ -17,7 +17,7 @@ export function loadPromptTemplate(rootDir, name) {
   if (!name || typeof name !== "string") {
     throw new Error("Template name is required.");
   }
-  if (name.includes("..") || name.includes("/") || name.includes("\\")) {
+  if (name.includes("\0") || name.includes("..") || name.includes("/") || name.includes("\\")) {
     throw new Error(`Invalid template name: ${name}`);
   }
   const promptPath = path.join(rootDir, "prompts", `${name}.md`);

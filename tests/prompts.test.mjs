@@ -47,6 +47,13 @@ describe("loadPromptTemplate", () => {
       /Template name is required/
     );
   });
+
+  it("throws for null byte injection", () => {
+    assert.throws(
+      () => loadPromptTemplate(ROOT_DIR, "valid\0name"),
+      /Invalid template name/
+    );
+  });
 });
 
 describe("interpolateTemplate", () => {

@@ -1,7 +1,6 @@
 /**
  * Job control: snapshots, resolution, sorting.
  */
-import fs from "node:fs";
 import { listJobs, readJobFile, resolveJobFile } from "./state.mjs";
 
 /**
@@ -23,7 +22,6 @@ export function sortJobsNewestFirst(jobs) {
  */
 export function readStoredJob(workspaceRoot, jobId) {
   const jobFile = resolveJobFile(workspaceRoot, jobId);
-  if (!fs.existsSync(jobFile)) return null;
   try { return readJobFile(jobFile); } catch { return null; }
 }
 

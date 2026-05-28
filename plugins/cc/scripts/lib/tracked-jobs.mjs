@@ -4,6 +4,7 @@
 import fs from "node:fs";
 import process from "node:process";
 
+import { readStoredJob } from "./job-control.mjs";
 import { nowIso as _nowIso, readJobFile, resolveJobFile, resolveJobLogFile, upsertJob, writeJobFile } from "./state.mjs";
 
 export const SESSION_ID_ENV = "CLAUDE_SESSION_ID";
@@ -95,12 +96,6 @@ export function createProgressReporter({ stderr = false, logFile = null, onEvent
   };
 }
 
-function readStoredJobOrNull(workspaceRoot, jobId) {
-  const jobFile = resolveJobFile(workspaceRoot, jobId);
-  if (!fs.existsSync(jobFile)) return null;
-  try { return readJobFile(jobFile); } catch { return null; }
-}
-
 export async function runTrackedJob(job, runner, options = {}) {
   const runningRecord = {
     ...job,
@@ -140,7 +135,7 @@ export async function runTrackedJob(job, runner, options = {}) {
     return execution;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    const existing = readStoredJobOrNull(job.workspaceRoot, job.id) ?? runningRecord;
+    const existing = readStoredJob(job.workspaceRoot, job.id) ?? runningRecord;
     const completedAt = nowIso();
     writeJobFile(job.workspaceRoot, job.id, {
       ...existing,

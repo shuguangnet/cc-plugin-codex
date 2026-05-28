@@ -2,7 +2,7 @@
  * Job control: snapshots, resolution, sorting.
  */
 import fs from "node:fs";
-import { listJobs, readJobFile, resolveJobFile, resolveJobsDir } from "./state.mjs";
+import { listJobs, readJobFile, resolveJobFile } from "./state.mjs";
 
 export function sortJobsNewestFirst(jobs) {
   return [...jobs].sort((a, b) => String(b.createdAt ?? "").localeCompare(String(a.createdAt ?? "")));
@@ -29,18 +29,21 @@ export function resolveResultJob(workspaceRoot, jobId) {
   return { job, storedJob };
 }
 
+function computeElapsedAndDuration(job) {
+  const startedAt = job.startedAt ? new Date(job.startedAt).getTime() : null;
+  const completedAt = job.completedAt ? new Date(job.completedAt).getTime() : null;
+  const elapsed = startedAt && !completedAt ? formatElapsed(Date.now() - startedAt) : null;
+  const duration = startedAt && completedAt ? formatElapsed(completedAt - startedAt) : null;
+  return { elapsed, duration };
+}
+
 export function buildSingleJobSnapshot(workspaceRoot, jobId) {
   const jobs = listJobs(workspaceRoot);
   const job = jobs.find((j) => j.id === jobId);
   if (!job) throw new Error(`Job ${jobId} not found.`);
   const storedJob = readStoredJob(workspaceRoot, jobId);
 
-  const elapsed = job.startedAt && !job.completedAt
-    ? formatElapsed(Date.now() - new Date(job.startedAt).getTime())
-    : null;
-  const duration = job.startedAt && job.completedAt
-    ? formatElapsed(new Date(job.completedAt).getTime() - new Date(job.startedAt).getTime())
-    : null;
+  const { elapsed, duration } = computeElapsedAndDuration(job);
 
   return {
     job: { ...job, elapsed, duration },
@@ -65,12 +68,7 @@ export function buildStatusSnapshot(workspaceRoot, options = {}) {
 }
 
 function enrichJob(job) {
-  const elapsed = job.startedAt && !job.completedAt
-    ? formatElapsed(Date.now() - new Date(job.startedAt).getTime())
-    : null;
-  const duration = job.startedAt && job.completedAt
-    ? formatElapsed(new Date(job.completedAt).getTime() - new Date(job.startedAt).getTime())
-    : null;
+  const { elapsed, duration } = computeElapsedAndDuration(job);
   return { ...job, elapsed, duration, kindLabel: job.jobClass ?? "task" };
 }
 

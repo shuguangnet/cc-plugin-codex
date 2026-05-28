@@ -4,8 +4,15 @@
 import fs from "node:fs";
 import path from "node:path";
 
+/**
+ * Read and parse a JSON file.
+ * Returns the parsed value, or null if the file doesn't exist or contains invalid JSON.
+ * Avoids TOCTOU race by catching read/parse errors directly instead of checking existence first.
+ *
+ * @param {string} filePath - Absolute path to the JSON file
+ * @returns {unknown} Parsed JSON value, or null on any error
+ */
 export function readJsonFile(filePath) {
-  if (!fs.existsSync(filePath)) return null;
   try {
     return JSON.parse(fs.readFileSync(filePath, "utf8"));
   } catch {

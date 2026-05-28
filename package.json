@@ -1,0 +1,15 @@
+{
+  "name": "cc-plugin-codex",
+  "version": "0.1.0",
+  "description": "Claude Code plugin for Codex - drive Claude Code from within Codex CLI",
+  "type": "module",
+  "main": "scripts/cc-companion.mjs",
+  "scripts": {
+    "test": "node --test tests/"
+  },
+  "keywords": ["codex", "claude-code", "plugin", "ai", "code-review"],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

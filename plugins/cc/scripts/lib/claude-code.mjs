@@ -166,6 +166,8 @@ export function parseClaudeOutput(stdout, stderr = "") {
       isError: resultEvent.is_error ?? false,
       cost: resultEvent.cost_usd ?? null,
       duration: resultEvent.duration_ms ?? null,
+      numTurns: resultEvent.num_turns ?? resultEvent.numTurns ?? null,
+      totalTokens: resultEvent.total_tokens ?? null,
       events,
       raw: resultEvent
     };

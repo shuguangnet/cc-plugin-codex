@@ -69,4 +69,81 @@ describe("parseClaudeOutput", () => {
     const result = parseClaudeOutput(output);
     assert.equal(result.isError, true);
   });
+
+  it("extracts numTurns and totalTokens from single JSON", () => {
+    const output = JSON.stringify({
+      result: "Done",
+      session_id: "sess-1",
+      num_turns: 5,
+      total_tokens: 1234
+    });
+    const result = parseClaudeOutput(output);
+    assert.equal(result.numTurns, 5);
+    assert.equal(result.totalTokens, 1234);
+  });
+
+  it("extracts numTurns and totalTokens from JSONL result event", () => {
+    const output = [
+      JSON.stringify({ type: "start", session_id: "sess-1" }),
+      JSON.stringify({ type: "result", result: "Done", num_turns: 3, total_tokens: 567 })
+    ].join("\n");
+    const result = parseClaudeOutput(output);
+    assert.equal(result.result, "Done");
+    assert.equal(result.numTurns, 3);
+    assert.equal(result.totalTokens, 567);
+  });
+
+  it("handles JSONL with mixed JSON and non-JSON lines", () => {
+    const output = [
+      "Some plain text line",
+      JSON.stringify({ type: "result", result: "OK" }),
+      "Another plain line"
+    ].join("\n");
+    const result = parseClaudeOutput(output);
+    assert.equal(result.result, "OK");
+    assert.equal(result.events.length, 1);
+  });
+
+  it("falls back to last content event when no result event in JSONL", () => {
+    const output = [
+      JSON.stringify({ type: "start", session_id: "sess-1" }),
+      JSON.stringify({ type: "content", content: "Working..." }),
+      JSON.stringify({ type: "assistant", content: "Almost done" })
+    ].join("\n");
+    const result = parseClaudeOutput(output);
+    assert.equal(result.result, "Almost done");
+    assert.equal(result.sessionId, "sess-1");
+  });
+
+  it("falls back to last event when no content events in JSONL", () => {
+    const output = [
+      JSON.stringify({ type: "start", session_id: "sess-2" }),
+      JSON.stringify({ type: "heartbeat" })
+    ].join("\n");
+    const result = parseClaudeOutput(output);
+    assert.equal(result.sessionId, "sess-2");
+    assert.ok(result.events.length === 2);
+  });
+
+  it("prefers result event over content event in JSONL", () => {
+    const output = [
+      JSON.stringify({ type: "content", content: "Draft output" }),
+      JSON.stringify({ type: "result", result: "Final output" })
+    ].join("\n");
+    const result = parseClaudeOutput(output);
+    assert.equal(result.result, "Final output");
+  });
+
+  it("handles single JSON array (non-object) as plain text", () => {
+    const output = JSON.stringify([1, 2, 3]);
+    const result = parseClaudeOutput(output);
+    assert.equal(result.result, "[1,2,3]");
+    assert.equal(result.sessionId, null);
+  });
+
+  it("handles single JSON primitive as plain text", () => {
+    const result = parseClaudeOutput('"hello"');
+    assert.equal(result.result, '"hello"');
+    assert.equal(result.sessionId, null);
+  });
 });

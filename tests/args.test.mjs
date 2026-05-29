@@ -36,6 +36,34 @@ describe("splitRawArgumentString", () => {
   it("handles input with only a backslash", () => {
     assert.deepStrictEqual(splitRawArgumentString("\\"), ["\\"]);
   });
+
+  it("preserves empty double-quoted string as empty token", () => {
+    assert.deepStrictEqual(splitRawArgumentString('--model ""'), ["--model", ""]);
+  });
+
+  it("preserves empty single-quoted string as empty token", () => {
+    assert.deepStrictEqual(splitRawArgumentString("--model ''"), ["--model", ""]);
+  });
+
+  it("handles empty quoted string at end of input", () => {
+    assert.deepStrictEqual(splitRawArgumentString('arg ""'), ["arg", ""]);
+  });
+
+  it("handles empty quoted string at start of input", () => {
+    assert.deepStrictEqual(splitRawArgumentString('" "'), [" "]);
+  });
+
+  it("handles multiple consecutive empty quoted strings", () => {
+    assert.deepStrictEqual(splitRawArgumentString('"" ""'), ["", ""]);
+  });
+
+  it("handles standalone empty double quotes", () => {
+    assert.deepStrictEqual(splitRawArgumentString('""'), [""]);
+  });
+
+  it("handles standalone empty single quotes", () => {
+    assert.deepStrictEqual(splitRawArgumentString("''"), [""]);
+  });
 });
 
 describe("parseArgs", () => {

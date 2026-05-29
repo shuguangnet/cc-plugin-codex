@@ -30,6 +30,7 @@ export function splitRawArgumentString(raw) {
   let inSingle = false;
   let inDouble = false;
   let escape = false;
+  let justClosedQuote = false;
 
   for (const char of raw) {
     if (escape) {
@@ -39,27 +40,32 @@ export function splitRawArgumentString(raw) {
     }
     if (char === '\\') {
       escape = true;
+      justClosedQuote = false;
       continue;
     }
     if (char === "'" && !inDouble) {
       inSingle = !inSingle;
+      if (!inSingle) justClosedQuote = true;
       continue;
     }
     if (char === '"' && !inSingle) {
       inDouble = !inDouble;
+      if (!inDouble) justClosedQuote = true;
       continue;
     }
     if (char === ' ' && !inSingle && !inDouble) {
-      if (current) {
+      if (current || justClosedQuote) {
         tokens.push(current);
         current = '';
+        justClosedQuote = false;
       }
       continue;
     }
     current += char;
+    justClosedQuote = false;
   }
   if (escape) current += '\\';
-  if (current) tokens.push(current);
+  if (current || justClosedQuote) tokens.push(current);
   return tokens;
 }
 

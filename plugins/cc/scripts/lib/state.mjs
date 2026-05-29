@@ -7,7 +7,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { writeJsonFile } from "./fs.mjs";
+import { readJsonFile, writeJsonFile } from "./fs.mjs";
 import { resolveWorkspaceRoot } from "./workspace.mjs";
 
 const STATE_VERSION = 1;
@@ -92,17 +92,16 @@ export function ensureStateDir(cwd) {
  */
 export function loadState(cwd) {
   const stateFile = resolveStateFile(cwd);
-  try {
-    const parsed = JSON.parse(fs.readFileSync(stateFile, "utf8"));
-    return {
-      ...defaultState(),
-      ...parsed,
-      config: { ...defaultState().config, ...(parsed.config ?? {}) },
-      jobs: Array.isArray(parsed.jobs) ? parsed.jobs : []
-    };
-  } catch {
+  const parsed = readJsonFile(stateFile);
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     return defaultState();
   }
+  return {
+    ...defaultState(),
+    ...parsed,
+    config: { ...defaultState().config, ...(parsed.config ?? {}) },
+    jobs: Array.isArray(parsed.jobs) ? parsed.jobs : []
+  };
 }
 
 function pruneJobs(jobs) {

@@ -35,6 +35,12 @@ describe("runCommand", () => {
     assert.equal(result.error.code, "ENOENT");
   });
 
+  it("returns null status for failed spawn (non-existent command)", () => {
+    const result = runCommand("nonexistent-command-xyz-98765", []);
+    assert.equal(result.status, null);
+    assert.equal(result.signal, null);
+  });
+
   it("respects cwd option", () => {
     const result = runCommand("pwd", [], { cwd: "/tmp" });
     assert.equal(result.status, 0);

@@ -132,8 +132,9 @@ describe("formatElapsed", () => {
     assert.equal(formatElapsed("abc"), "0ms");
   });
 
-  it("rounds fractional milliseconds below 1s", () => {
-    assert.equal(formatElapsed(999.6), "1000ms");
+  it("floors fractional milliseconds below 1s", () => {
+    assert.equal(formatElapsed(999.6), "999ms");
     assert.equal(formatElapsed(500.4), "500ms");
+    assert.equal(formatElapsed(100.9), "100ms");
   });
 });

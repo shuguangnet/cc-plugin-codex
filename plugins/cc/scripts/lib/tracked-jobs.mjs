@@ -164,14 +164,28 @@ export function createProgressReporter({ stderr = false, logFile = null, onEvent
  * Creates running state, executes the runner function, and persists the result.
  * On failure, records the error and re-throws.
  *
- * @param {object} job - Job record (must include id, workspaceRoot)
+ * @param {object} job - Job record (must include id and workspaceRoot)
  * @param {function(): Promise<object>} runner - Async function that executes the job
  * @param {object} [options={}] - Options
  * @param {string} [options.logFile] - Absolute path to the job's log file
  * @returns {Promise<object>} Execution result from the runner
+ * @throws {Error} If job is not a valid object, or if id/workspaceRoot are missing
  * @throws {*} Re-throws any error from the runner after recording failure state
  */
 export async function runTrackedJob(job, runner, options = {}) {
+  if (!job || typeof job !== "object") {
+    throw new Error("runTrackedJob requires a job object.");
+  }
+  if (!job.id || typeof job.id !== "string") {
+    throw new Error("runTrackedJob requires job.id to be a non-empty string.");
+  }
+  if (!job.workspaceRoot || typeof job.workspaceRoot !== "string") {
+    throw new Error("runTrackedJob requires job.workspaceRoot to be a non-empty string.");
+  }
+  if (typeof runner !== "function") {
+    throw new Error("runTrackedJob requires a runner function.");
+  }
+
   const runningRecord = {
     ...job,
     status: "running",

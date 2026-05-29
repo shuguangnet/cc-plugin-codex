@@ -9,7 +9,8 @@ import {
   createJobProgressUpdater,
   appendLogLine,
   appendLogBlock,
-  createJobLogFile
+  createJobLogFile,
+  runTrackedJob
 } from "../plugins/cc/scripts/lib/tracked-jobs.mjs";
 import { loadState, resolveJobFile, resolveJobLogFile } from "../plugins/cc/scripts/lib/state.mjs";
 
@@ -179,5 +180,63 @@ describe("createProgressReporter", () => {
     assert.equal(events.length, 2);
     assert.equal(events[0].message, "");
     assert.equal(events[1].message, "");
+  });
+});
+
+describe("runTrackedJob validation", () => {
+  it("throws when job is null", async () => {
+    await assert.rejects(
+      () => runTrackedJob(null, async () => ({})),
+      /runTrackedJob requires a job object/
+    );
+  });
+
+  it("throws when job is undefined", async () => {
+    await assert.rejects(
+      () => runTrackedJob(undefined, async () => ({})),
+      /runTrackedJob requires a job object/
+    );
+  });
+
+  it("throws when job is not an object", async () => {
+    await assert.rejects(
+      () => runTrackedJob("not-an-object", async () => ({})),
+      /runTrackedJob requires a job object/
+    );
+  });
+
+  it("throws when job.id is missing", async () => {
+    await assert.rejects(
+      () => runTrackedJob({ workspaceRoot: "/tmp" }, async () => ({})),
+      /runTrackedJob requires job.id/
+    );
+  });
+
+  it("throws when job.id is empty string", async () => {
+    await assert.rejects(
+      () => runTrackedJob({ id: "", workspaceRoot: "/tmp" }, async () => ({})),
+      /runTrackedJob requires job.id/
+    );
+  });
+
+  it("throws when job.workspaceRoot is missing", async () => {
+    await assert.rejects(
+      () => runTrackedJob({ id: "job-1" }, async () => ({})),
+      /runTrackedJob requires job.workspaceRoot/
+    );
+  });
+
+  it("throws when job.workspaceRoot is empty string", async () => {
+    await assert.rejects(
+      () => runTrackedJob({ id: "job-1", workspaceRoot: "" }, async () => ({})),
+      /runTrackedJob requires job.workspaceRoot/
+    );
+  });
+
+  it("throws when runner is not a function", async () => {
+    await assert.rejects(
+      () => runTrackedJob({ id: "job-1", workspaceRoot: "/tmp" }, "not-a-function"),
+      /runTrackedJob requires a runner function/
+    );
   });
 });

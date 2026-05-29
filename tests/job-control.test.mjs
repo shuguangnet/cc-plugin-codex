@@ -6,6 +6,9 @@ import os from "node:os";
 import {
   sortJobsNewestFirst,
   readStoredJob,
+  resolveCancelableJob,
+  resolveResultJob,
+  buildSingleJobSnapshot,
   buildStatusSnapshot,
   formatElapsed
 } from "../plugins/cc/scripts/lib/job-control.mjs";
@@ -68,6 +71,110 @@ describe("job control", () => {
     }
     const snapshot = buildStatusSnapshot(testDir, { showAll: true });
     assert.ok(snapshot.recent.length > 0);
+  });
+});
+
+describe("resolveCancelableJob", () => {
+  it("resolves an existing job", () => {
+    upsertJob(testDir, { id: "job-cancel-1", status: "running", title: "Task" });
+    const { job } = resolveCancelableJob(testDir, "job-cancel-1");
+    assert.equal(job.id, "job-cancel-1");
+    assert.equal(job.status, "running");
+  });
+
+  it("throws for non-existent job", () => {
+    assert.throws(
+      () => resolveCancelableJob(testDir, "nonexistent"),
+      /Job nonexistent not found/
+    );
+  });
+});
+
+describe("resolveResultJob", () => {
+  it("resolves job and reads stored job file", () => {
+    upsertJob(testDir, { id: "job-result-1", status: "completed" });
+    writeJobFile(testDir, "job-result-1", { id: "job-result-1", result: "done" });
+    const { job, storedJob } = resolveResultJob(testDir, "job-result-1");
+    assert.equal(job.id, "job-result-1");
+    assert.equal(job.status, "completed");
+    assert.ok(storedJob);
+    assert.equal(storedJob.result, "done");
+  });
+
+  it("returns null storedJob when file is missing", () => {
+    upsertJob(testDir, { id: "job-result-2", status: "completed" });
+    const { job, storedJob } = resolveResultJob(testDir, "job-result-2");
+    assert.equal(job.id, "job-result-2");
+    assert.equal(storedJob, null);
+  });
+
+  it("throws for non-existent job", () => {
+    assert.throws(
+      () => resolveResultJob(testDir, "nonexistent"),
+      /Job nonexistent not found/
+    );
+  });
+});
+
+describe("buildSingleJobSnapshot", () => {
+  it("builds snapshot with stored job data and progress", () => {
+    upsertJob(testDir, {
+      id: "job-snap-1",
+      status: "running",
+      startedAt: new Date(Date.now() - 5000).toISOString()
+    });
+    writeJobFile(testDir, "job-snap-1", {
+      id: "job-snap-1",
+      status: "running",
+      progress: [
+        { message: "step 1" },
+        { message: "step 2" },
+        { message: "step 3" },
+        { message: "step 4" },
+        { message: "step 5" },
+        { message: "step 6" }
+      ]
+    });
+
+    const snapshot = buildSingleJobSnapshot(testDir, "job-snap-1");
+    assert.equal(snapshot.job.id, "job-snap-1");
+    assert.equal(snapshot.job.status, "running");
+    assert.ok(snapshot.job.elapsed); // should have elapsed time
+    assert.ok(snapshot.storedJob);
+    assert.equal(snapshot.storedJob.id, "job-snap-1");
+    // Should slice last 5 progress items
+    assert.equal(snapshot.progressPreview.length, 5);
+    assert.equal(snapshot.progressPreview[0].message, "step 2");
+  });
+
+  it("builds snapshot for completed job with duration", () => {
+    const started = new Date(Date.now() - 10000).toISOString();
+    const completed = new Date(Date.now() - 2000).toISOString();
+    upsertJob(testDir, {
+      id: "job-snap-2",
+      status: "completed",
+      startedAt: started,
+      completedAt: completed
+    });
+
+    const snapshot = buildSingleJobSnapshot(testDir, "job-snap-2");
+    assert.equal(snapshot.job.id, "job-snap-2");
+    assert.ok(snapshot.job.duration);
+    assert.equal(snapshot.job.elapsed, null);
+  });
+
+  it("returns empty progressPreview when no stored job", () => {
+    upsertJob(testDir, { id: "job-snap-3", status: "completed" });
+    const snapshot = buildSingleJobSnapshot(testDir, "job-snap-3");
+    assert.deepEqual(snapshot.progressPreview, []);
+    assert.equal(snapshot.storedJob, null);
+  });
+
+  it("throws for non-existent job", () => {
+    assert.throws(
+      () => buildSingleJobSnapshot(testDir, "nonexistent"),
+      /Job nonexistent not found/
+    );
   });
 });
 

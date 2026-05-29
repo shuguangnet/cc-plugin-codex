@@ -16,7 +16,7 @@ import process from "node:process";
  * @param {number} [options.maxBuffer] - Max buffer size (default: 10 MB)
  * @param {string|string[]} [options.stdio] - Stdio mode (default: "pipe")
  * @param {number} [options.timeout] - Timeout in milliseconds (default: 0 = no timeout)
- * @returns {{ command: string, args: string[], status: number, signal: string|null, stdout: string, stderr: string, error: Error|null }}
+ * @returns {{ command: string, args: string[], status: number, signal: string|null, stdout: string, stderr: string, error: Error|null, timedOut: boolean }}
  */
 export function runCommand(command, args = [], options = {}) {
   if (!command || typeof command !== "string") {
@@ -37,6 +37,8 @@ export function runCommand(command, args = [], options = {}) {
     windowsHide: true
   });
 
+  const timedOut = result.error?.code === "ETIMEDOUT" || (result.status === null && result.signal === "SIGTERM" && (options.timeout ?? 0) > 0);
+
   return {
     command,
     args,
@@ -44,7 +46,8 @@ export function runCommand(command, args = [], options = {}) {
     signal: result.signal ?? null,
     stdout: result.stdout ?? "",
     stderr: result.stderr ?? "",
-    error: result.error ?? null
+    error: result.error ?? null,
+    timedOut
   };
 }
 
@@ -109,12 +112,14 @@ export function terminateProcessTree(pid) {
 /**
  * Format a failed command result into a human-readable error string.
  *
- * @param {{ command: string, args: string[], status: number, signal: string|null, stdout: string, stderr: string }} result
+ * @param {{ command: string, args: string[], status: number, signal: string|null, stdout: string, stderr: string, timedOut?: boolean }} result
  * @returns {string} Formatted error description
  */
 export function formatCommandFailure(result) {
   const parts = [`${result.command} ${result.args.join(" ")}`.trim()];
-  if (result.signal) {
+  if (result.timedOut) {
+    parts.push("timed out");
+  } else if (result.signal) {
     parts.push(`signal=${result.signal}`);
   } else {
     parts.push(`exit=${result.status}`);

@@ -15,6 +15,7 @@ describe("runCommand", () => {
     assert.ok(result.stdout.includes("hello"));
     assert.equal(result.error, null);
     assert.equal(result.signal, null);
+    assert.equal(result.timedOut, false);
   });
 
   it("captures stderr output", () => {
@@ -27,6 +28,7 @@ describe("runCommand", () => {
     const result = runCommand("node", ["-e", "process.exit(42)"]);
     assert.equal(result.status, 42);
     assert.equal(result.error, null);
+    assert.equal(result.timedOut, false);
   });
 
   it("returns error for non-existent command", () => {
@@ -60,6 +62,19 @@ describe("runCommand", () => {
     const result = runCommand("echo", ["a", "b", "c"]);
     assert.equal(result.command, "echo");
     assert.deepStrictEqual(result.args, ["a", "b", "c"]);
+    assert.equal(result.timedOut, false);
+  });
+
+  it("sets timedOut=true when command exceeds timeout", () => {
+    const result = runCommand("node", ["-e", "setTimeout(() => {}, 10000)"], { timeout: 50 });
+    assert.equal(result.timedOut, true);
+    assert.equal(result.status, null);
+    assert.equal(result.signal, "SIGTERM");
+  });
+
+  it("sets timedOut=false when no timeout configured", () => {
+    const result = runCommand("node", ["-e", "process.exit(0)"], {});
+    assert.equal(result.timedOut, false);
   });
 
   it("throws for null command", () => {
@@ -137,6 +152,21 @@ describe("formatCommandFailure", () => {
     assert.ok(msg.includes("git push"));
     assert.ok(msg.includes("exit=1"));
     assert.ok(msg.includes("fatal: error"));
+  });
+
+  it("formats timed out command", () => {
+    const msg = formatCommandFailure({
+      command: "node",
+      args: ["server.js"],
+      status: null,
+      signal: "SIGTERM",
+      stdout: "",
+      stderr: "",
+      timedOut: true
+    });
+    assert.ok(msg.includes("node server.js"));
+    assert.ok(msg.includes("timed out"));
+    assert.ok(!msg.includes("signal=SIGTERM"));
   });
 
   it("formats signal", () => {

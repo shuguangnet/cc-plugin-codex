@@ -142,6 +142,32 @@ describe("formatCommandFailure", () => {
   });
 });
 
+describe("binaryAvailable", () => {
+  it("returns available=true for existing binary (node)", () => {
+    const result = binaryAvailable("node", ["--version"]);
+    assert.equal(result.available, true);
+    assert.ok(result.detail.length > 0);
+  });
+
+  it("returns available=false for nonexistent binary", () => {
+    const result = binaryAvailable("nonexistent-binary-xyz-98765");
+    assert.equal(result.available, false);
+    assert.equal(result.detail, "not found");
+  });
+
+  it("returns detail containing version for node", () => {
+    const result = binaryAvailable("node", ["--version"]);
+    assert.ok(result.detail.startsWith("v"));
+  });
+
+  it("returns available=false when binary exits non-zero", () => {
+    // node -e "process.exit(1)" will fail with exit code 1
+    const result = binaryAvailable("node", ["-e", "process.exit(1)"]);
+    assert.equal(result.available, false);
+    assert.ok(result.detail.length > 0);
+  });
+});
+
 describe("terminateProcessTree", () => {
   it("does not throw for invalid pid", () => {
     assert.doesNotThrow(() => terminateProcessTree(NaN));

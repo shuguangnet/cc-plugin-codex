@@ -84,6 +84,26 @@ describe("git utilities", () => {
     assert.ok(content.includes("new content") || content === "");
   });
 
+  it("getDiffContent branch scope returns diff against base", () => {
+    // Create a feature branch with changes
+    const baseBranch = getCurrentBranch(testRepo);
+    runCommand("git", ["checkout", "-b", "feature"], { cwd: testRepo });
+    fs.writeFileSync(path.join(testRepo, "feature.txt"), "feature code");
+    runCommand("git", ["add", "feature.txt"], { cwd: testRepo });
+    runCommand("git", ["commit", "-m", "add feature"], { cwd: testRepo });
+
+    const content = getDiffContent(baseBranch, testRepo, "branch");
+    assert.ok(content.includes("feature code"), `Expected diff to include 'feature code', got: ${content.slice(0, 200)}`);
+  });
+
+  it("getDiffContent branch scope returns empty for no diff against base", () => {
+    // Create a branch with no extra changes beyond main
+    const baseBranch = getCurrentBranch(testRepo);
+    runCommand("git", ["checkout", "-b", "empty-feature"], { cwd: testRepo });
+    const content = getDiffContent(baseBranch, testRepo, "branch");
+    assert.equal(content, "");
+  });
+
   it("resolveReviewTarget returns working-tree mode by default", () => {
     const target = resolveReviewTarget(testRepo);
     assert.equal(target.mode, "working-tree");

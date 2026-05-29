@@ -17,6 +17,9 @@ const STATE_FILE_NAME = "state.json";
 const JOBS_DIR_NAME = "jobs";
 const MAX_JOBS = 50;
 
+/** @type {Map<string, string>} Cache for resolveStateDir results keyed by cwd. */
+const stateDirCache = new Map();
+
 /**
  * Get the current ISO timestamp.
  * @returns {string} ISO 8601 date string
@@ -35,10 +38,14 @@ function defaultState() {
 
 /**
  * Resolve the state directory for a workspace, using a hash of the real path.
+ * Results are cached per cwd to avoid repeated git subprocess spawns and filesystem calls.
  * @param {string} cwd - Working directory
  * @returns {string} Absolute path to the state directory
  */
 export function resolveStateDir(cwd) {
+  const cached = stateDirCache.get(cwd);
+  if (cached !== undefined) return cached;
+
   const workspaceRoot = resolveWorkspaceRoot(cwd);
   let canonical = workspaceRoot;
   try {
@@ -53,7 +60,9 @@ export function resolveStateDir(cwd) {
   const hash = createHash("sha256").update(canonical).digest("hex").slice(0, 16);
   const pluginDataDir = process.env[PLUGIN_DATA_ENV];
   const stateRoot = pluginDataDir ? path.join(pluginDataDir, "state") : FALLBACK_STATE_ROOT_DIR;
-  return path.join(stateRoot, `${slug}-${hash}`);
+  const result = path.join(stateRoot, `${slug}-${hash}`);
+  stateDirCache.set(cwd, result);
+  return result;
 }
 
 /**

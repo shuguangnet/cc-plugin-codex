@@ -57,60 +57,44 @@ export async function getClaudeCodeAuthStatus(cwd) {
 }
 
 /**
+ * Build common CLI arguments shared by both print and resume modes.
+ * Handles outputFormat, maxTurns, model, systemPrompt, allowedTools, and permissionMode.
+ *
+ * @param {object} [options={}] - CLI options
+ * @returns {string[]} CLI argument tokens
+ */
+function buildCommonArgs(options = {}) {
+  const args = [];
+  args.push("--output-format", options.outputFormat ?? "json");
+  if (options.maxTurns) args.push("--max-turns", String(options.maxTurns));
+  if (options.model) args.push("--model", options.model);
+  if (options.systemPrompt) args.push("--system-prompt", options.systemPrompt);
+  if (options.allowedTools) args.push("--allowedTools", options.allowedTools);
+  if (options.permissionMode) args.push("--permission-mode", options.permissionMode);
+  return args;
+}
+
+/**
  * Build CLI arguments for a Claude Code print-mode invocation.
  */
 function buildPrintArgs(prompt, options = {}) {
-  const args = ["-p", prompt];
-
-  if (options.outputFormat) {
-    args.push("--output-format", options.outputFormat);
-  } else {
-    args.push("--output-format", "json");
-  }
-
-  if (options.maxTurns) {
-    args.push("--max-turns", String(options.maxTurns));
-  }
-
-  if (options.model) {
-    args.push("--model", options.model);
-  }
-
-  if (options.systemPrompt) {
-    args.push("--system-prompt", options.systemPrompt);
-  }
-
-  if (options.allowedTools) {
-    args.push("--allowedTools", options.allowedTools);
-  }
-
-  if (options.permissionMode) {
-    args.push("--permission-mode", options.permissionMode);
-  }
-
+  const args = ["-p", prompt, ...buildCommonArgs(options)];
   if (options.resume) {
     args.push("--resume", options.resume);
   }
-
   return args;
 }
 
 /**
  * Build CLI arguments for conversation resume.
- * Reuses the common output format/model args from print mode.
+ * Shares common option args with print mode via {@link buildCommonArgs}.
  */
 function buildResumeArgs(sessionId, prompt, options = {}) {
   const args = ["--resume", sessionId];
-
   if (prompt) {
     args.push("-p", prompt);
   }
-
-  // Share common option args with buildPrintArgs
-  args.push("--output-format", options.outputFormat ?? "json");
-  if (options.maxTurns) args.push("--max-turns", String(options.maxTurns));
-  if (options.model) args.push("--model", options.model);
-
+  args.push(...buildCommonArgs(options));
   return args;
 }
 

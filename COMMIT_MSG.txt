@@ -1,0 +1,8 @@
+refactor: extract common CLI args builder in claude-code.mjs
+
+Extract duplicated CLI argument construction from buildPrintArgs and
+buildResumeArgs into a shared buildCommonArgs helper function.
+
+Also fixes buildResumeArgs missing systemPrompt, allowedTools and
+permissionMode options - previously these were silently dropped when
+resuming conversations.

@@ -33,14 +33,14 @@ export function loadPromptTemplate(rootDir, name) {
 
 /**
  * Interpolate template variables in {{KEY}} placeholders.
- * Only uppercase letters and underscores are matched.
+ * Matches uppercase letters, digits, and underscores.
  *
  * @param {string} template - Template string with {{VAR}} placeholders
  * @param {Record<string, string>} variables - Variable values to substitute
  * @returns {string} Interpolated string
  */
 export function interpolateTemplate(template, variables) {
-  return template.replace(/\{\{([A-Z_]+)\}\}/g, (_, key) => {
+  return template.replace(/\{\{([A-Z0-9_]+)\}\}/g, (_, key) => {
     return Object.prototype.hasOwnProperty.call(variables, key) ? variables[key] : "";
   });
 }

@@ -69,4 +69,43 @@ describe("interpolateTemplate", () => {
     const result = interpolateTemplate("Hello {{NAME}}!", {});
     assert.equal(result, "Hello !");
   });
+
+  it("replaces placeholders with digits in variable names", () => {
+    const result = interpolateTemplate("{{VAR_1}} and {{ITEM_2}}", {
+      VAR_1: "first",
+      ITEM_2: "second"
+    });
+    assert.equal(result, "first and second");
+  });
+
+  it("replaces placeholders starting with digits", () => {
+    const result = interpolateTemplate("{{3_RETRY}} timeout", {
+      "3_RETRY": "third"
+    });
+    assert.equal(result, "third timeout");
+  });
+
+  it("replaces placeholders ending with digits", () => {
+    const result = interpolateTemplate("Value: {{MAX_3}}", {
+      MAX_3: "three"
+    });
+    assert.equal(result, "Value: three");
+  });
+
+  it("ignores lowercase variable names", () => {
+    const result = interpolateTemplate("{{lower}} and {{MIXED_case}}", {
+      lower: "nope",
+      MIXED_case: "nope"
+    });
+    assert.equal(result, "{{lower}} and {{MIXED_case}}");
+  });
+
+  it("handles multiple replacements including digits", () => {
+    const result = interpolateTemplate("{{A_1}} {{B_2}} {{C_3}}", {
+      A_1: "x",
+      B_2: "y",
+      C_3: "z"
+    });
+    assert.equal(result, "x y z");
+  });
 });

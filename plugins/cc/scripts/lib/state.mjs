@@ -132,8 +132,10 @@ export function saveState(cwd, state) {
   for (const job of previousJobs) {
     if (!retainedIds.has(job.id)) {
       const jobFile = resolveJobFile(cwd, job.id);
-      if (fs.existsSync(jobFile)) fs.unlinkSync(jobFile);
-      if (job.logFile && fs.existsSync(job.logFile)) fs.unlinkSync(job.logFile);
+      try { fs.unlinkSync(jobFile); } catch { /* file may not exist */ }
+      if (job.logFile) {
+        try { fs.unlinkSync(job.logFile); } catch { /* file may not exist */ }
+      }
     }
   }
 

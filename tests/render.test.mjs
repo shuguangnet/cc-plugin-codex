@@ -39,6 +39,80 @@ describe("renderSetupReport", () => {
     assert.ok(output.includes("Next steps:"));
     assert.ok(output.includes("Install Claude Code"));
   });
+
+  it("renders review gate as enabled", () => {
+    const output = renderSetupReport({
+      ready: true,
+      node: { detail: "v20.0.0" },
+      npm: { detail: "10.0.0" },
+      claudeCode: { detail: "1.0.0" },
+      auth: { detail: "Authenticated" },
+      reviewGateEnabled: true,
+      actionsTaken: [],
+      nextSteps: []
+    });
+    assert.ok(output.includes("review gate: enabled"));
+  });
+
+  it("renders review gate as disabled when false", () => {
+    const output = renderSetupReport({
+      ready: true,
+      node: { detail: "v20.0.0" },
+      npm: { detail: "10.0.0" },
+      claudeCode: { detail: "1.0.0" },
+      auth: { detail: "Authenticated" },
+      reviewGateEnabled: false,
+      actionsTaken: [],
+      nextSteps: []
+    });
+    assert.ok(output.includes("review gate: disabled"));
+  });
+
+  it("renders actions taken", () => {
+    const output = renderSetupReport({
+      ready: true,
+      node: { detail: "v20.0.0" },
+      npm: { detail: "10.0.0" },
+      claudeCode: { detail: "1.0.0" },
+      auth: { detail: "Authenticated" },
+      actionsTaken: ["Created config file", "Added hooks"],
+      nextSteps: []
+    });
+    assert.ok(output.includes("Actions taken:"));
+    assert.ok(output.includes("- Created config file"));
+    assert.ok(output.includes("- Added hooks"));
+  });
+
+  it("renders both actions taken and next steps", () => {
+    const output = renderSetupReport({
+      ready: false,
+      node: { detail: "v20.0.0" },
+      npm: { detail: "10.0.0" },
+      claudeCode: { detail: "not found" },
+      auth: { detail: "Not authenticated" },
+      actionsTaken: ["Checked dependencies"],
+      nextSteps: ["Install Claude Code", "Run authentication"]
+    });
+    assert.ok(output.includes("Actions taken:"));
+    assert.ok(output.includes("- Checked dependencies"));
+    assert.ok(output.includes("Next steps:"));
+    assert.ok(output.includes("- Install Claude Code"));
+    assert.ok(output.includes("- Run authentication"));
+  });
+
+  it("omits actions section when empty", () => {
+    const output = renderSetupReport({
+      ready: true,
+      node: { detail: "v20.0.0" },
+      npm: { detail: "10.0.0" },
+      claudeCode: { detail: "1.0.0" },
+      auth: { detail: "Authenticated" },
+      actionsTaken: [],
+      nextSteps: []
+    });
+    assert.ok(!output.includes("Actions taken:"));
+    assert.ok(!output.includes("Next steps:"));
+  });
 });
 
 describe("renderTaskResult", () => {
@@ -197,6 +271,25 @@ describe("renderCancelReport", () => {
     const output = renderCancelReport({ id: "job-123", title: "Test Task" });
     assert.ok(output.includes("Cancelled job-123"));
     assert.ok(output.includes("Test Task"));
+  });
+
+  it("renders cancel info with summary", () => {
+    const output = renderCancelReport({ id: "job-456", title: "Review", summary: "Code review of main branch" });
+    assert.ok(output.includes("Cancelled job-456"));
+    assert.ok(output.includes("Review"));
+    assert.ok(output.includes("Summary: Code review of main branch"));
+  });
+
+  it("renders cancel info without title", () => {
+    const output = renderCancelReport({ id: "job-789" });
+    assert.ok(output.includes("Cancelled job-789"));
+    assert.ok(!output.includes("Title:"));
+    assert.ok(!output.includes("Summary:"));
+  });
+
+  it("always includes queue check hint", () => {
+    const output = renderCancelReport({ id: "job-1", title: "T" });
+    assert.ok(output.includes("/cc:status"));
   });
 });
 

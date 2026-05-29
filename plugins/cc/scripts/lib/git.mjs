@@ -46,6 +46,30 @@ export function getDiffStat(base, cwd) {
 }
 
 /**
+ * Get the unified diff for working tree changes (staged + unstaged).
+ *
+ * @param {string} cwd - Directory path (must be inside a git repo)
+ * @returns {string} Combined diff of staged and unstaged changes, or empty string
+ */
+function getWorkingTreeDiff(cwd) {
+  const staged = runCommand("git", ["diff", "--cached"], { cwd });
+  const unstaged = runCommand("git", ["diff"], { cwd });
+  return [staged.stdout, unstaged.stdout].filter(Boolean).join("\n");
+}
+
+/**
+ * Get the unified diff between a base ref and HEAD.
+ *
+ * @param {string} base - Base ref (e.g. "main")
+ * @param {string} cwd - Directory path (must be inside a git repo)
+ * @returns {string} Unified diff content, or empty string
+ */
+function getBranchDiff(base, cwd) {
+  const result = runCommand("git", ["diff", `${base}...HEAD`], { cwd });
+  return result.stdout ?? "";
+}
+
+/**
  * Get the full diff content for code review.
  * Supports three scopes:
  * - "working-tree": staged + unstaged changes in the working tree
@@ -59,22 +83,16 @@ export function getDiffStat(base, cwd) {
  */
 export function getDiffContent(base, cwd, scope = "auto") {
   if (scope === "working-tree") {
-    const staged = runCommand("git", ["diff", "--cached"], { cwd });
-    const unstaged = runCommand("git", ["diff"], { cwd });
-    return [staged.stdout, unstaged.stdout].filter(Boolean).join("\n");
+    return getWorkingTreeDiff(cwd);
   }
   if (scope === "branch" && base) {
-    const result = runCommand("git", ["diff", `${base}...HEAD`], { cwd });
-    return result.stdout ?? "";
+    return getBranchDiff(base, cwd);
   }
   // auto: try working tree first, fall back to branch diff
-  const working = runCommand("git", ["diff"], { cwd });
-  const staged = runCommand("git", ["diff", "--cached"], { cwd });
-  const combined = [staged.stdout, working.stdout].filter(Boolean).join("\n");
-  if (combined.trim()) return combined;
+  const workingTreeDiff = getWorkingTreeDiff(cwd);
+  if (workingTreeDiff.trim()) return workingTreeDiff;
   if (base) {
-    const result = runCommand("git", ["diff", `${base}...HEAD`], { cwd });
-    return result.stdout ?? "";
+    return getBranchDiff(base, cwd);
   }
   return "";
 }

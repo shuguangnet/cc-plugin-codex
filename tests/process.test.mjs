@@ -61,6 +61,41 @@ describe("runCommand", () => {
     assert.equal(result.command, "echo");
     assert.deepStrictEqual(result.args, ["a", "b", "c"]);
   });
+
+  it("throws for null command", () => {
+    assert.throws(
+      () => runCommand(null),
+      /runCommand requires a non-empty string command/
+    );
+  });
+
+  it("throws for undefined command", () => {
+    assert.throws(
+      () => runCommand(undefined),
+      /runCommand requires a non-empty string command/
+    );
+  });
+
+  it("throws for empty string command", () => {
+    assert.throws(
+      () => runCommand(""),
+      /runCommand requires a non-empty string command/
+    );
+  });
+
+  it("throws for non-string command", () => {
+    assert.throws(
+      () => runCommand(123),
+      /runCommand requires a non-empty string command/
+    );
+  });
+
+  it("throws for non-array args", () => {
+    assert.throws(
+      () => runCommand("echo", "not-an-array"),
+      /runCommand args must be an array/
+    );
+  });
 });
 
 describe("runCommandChecked", () => {

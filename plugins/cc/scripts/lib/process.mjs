@@ -19,6 +19,12 @@ import process from "node:process";
  * @returns {{ command: string, args: string[], status: number, signal: string|null, stdout: string, stderr: string, error: Error|null }}
  */
 export function runCommand(command, args = [], options = {}) {
+  if (!command || typeof command !== "string") {
+    throw new Error("runCommand requires a non-empty string command.");
+  }
+  if (!Array.isArray(args)) {
+    throw new Error("runCommand args must be an array.");
+  }
   const result = spawnSync(command, args, {
     cwd: options.cwd,
     env: options.env,
